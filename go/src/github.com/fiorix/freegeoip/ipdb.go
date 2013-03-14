@@ -4,6 +4,8 @@ import (
     "encoding/xml"
     "fmt"
     "net"
+    "bytes"
+    "encoding/binary"
     "database/sql"
     _   "github.com/mattn/go-sqlite3"
 )
@@ -13,7 +15,7 @@ type IpDb struct {
 }
 
 type IpMessage struct {
-    XMLName   xml.Name `xml:"Response"`
+    XMLName   xml.Name `json:"-" xml:"Response"`
     Found bool `json:"-" xml:"-"`
     CityName string `json:"city" xml:"City"`
     RegionCode string `json:"region_code"`
@@ -75,11 +77,9 @@ func (db *IpDb) Query(ip string, c chan IpMessage) {
         defer stmt.Close()
 
 
-        var queryIP int
-        for b := range lIP {
-            queryIP <<= 8
-            queryIP += b
-        }
+        b := bytes.NewBuffer(lIP.To4())
+        var queryIP uint32
+        binary.Read(b, binary.BigEndian, &queryIP)
 
         err = stmt.QueryRow(queryIP).Scan(
             &ret.CountryCode, &ret.CountryName,
